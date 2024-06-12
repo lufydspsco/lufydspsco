@@ -1,0 +1,60 @@
+let cliente = {
+    nome: "Luan Gerhard Radun",
+    idade: 18,
+    listaDeCompras: {}
+  };
+  
+  function addProduto(produto, preco, quantidade) {
+    cliente.listaDeCompras[produto] = preco * quantidade;
+  }
+  
+  addProduto("Arroz", 2.50, 1);
+  addProduto("Feijão", 3.00, 1);
+  addProduto("Ovo", 1.50, 1);
+  addProduto("Leite", 4.00, 1);
+  addProduto("Pão", 1.00, 1);
+  addProduto("Queijo", 5.00, 1);
+  addProduto("Café", 10.00, 1);
+  
+  let total = 0;
+  console.log(`Cliente: ${cliente.nome}, ${cliente.idade} anos`);
+  console.log("Produtos:");
+  for (let produto in cliente.listaDeCompras) {
+    console.log(`- ${produto}: R$ ${cliente.listaDeCompras[produto].toFixed(2)}`);
+    total += cliente.listaDeCompras[produto];
+  }
+  console.log(`Total: R$ ${total.toFixed(2)}`);
+
+  class CalculadoraDeCompras {
+    constructor(nome, idade) {
+      this.nome = nome;
+      this.idade = idade;
+      this.listaDeCompras = {};
+    }
+  
+    addProduto(produto, preco, quantidade) {
+      this.listaDeCompras[produto] = preco * quantidade;
+    }
+  
+    calcularTotal() {
+      let total = 0;
+      console.log(`Cliente: ${this.nome}, ${this.idade} anos`);
+      console.log("Produtos:");
+      for (let produto in this.listaDeCompras) {
+        console.log(`- ${produto}: R$ ${this.listaDeCompras[produto].toFixed(2)}`);
+        total += this.listaDeCompras[produto];
+      }
+      console.log(`Total: R$ ${total.toFixed(2)}`);
+    }
+  }
+  
+  let calculadora = new CalculadoraDeCompras("Luan Gerhard Radun", 18);
+  calculadora.addProduto("Arroz", 2.50, 1);
+  calculadora.addProduto("Feijão", 3.00, 1);
+  calculadora.addProduto("Ovo", 1.50, 1);
+  calculadora.addProduto("Leite", 4.00, 1);
+  calculadora.addProduto("Pão", 1.00, 1);
+  calculadora.addProduto("Queijo", 5.00, 1);
+  calculadora.addProduto("Café", 10.00, 1);
+  calculadora.calcularTotal();
+  
