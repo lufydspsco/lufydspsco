@@ -1,0 +1,143 @@
+// Supermarket.js
+
+class Customer {
+    name;
+    email;
+    balance;
+
+    constructor(name, email, balance) {
+        if (Number.isInteger(balance)) {
+            throw new Error("Balance must be a non-integer number");
+        }
+        this.name = name;
+        this.email = email;
+        this.balance = balance;
+    }
+}
+
+class Product {
+    name;
+    price;
+    quantity;
+
+    constructor(name, price, quantity) {
+        if (Number.isInteger(price)) {
+            throw new Error("Price must be a non-integer number");
+        }
+        this.name = name;
+        this.price = price;
+        this.quantity = quantity;
+    }
+}
+
+class Supermarket {
+    customers = new Map();
+    products = new Map();
+
+    constructor() {}
+
+    addCustomer(customer) {
+        this.customers.set(customer.email, customer);
+    }
+
+    addProduct(product) {
+        this.products.set(product.name, product);
+    }
+
+    listCustomers() {
+        for (const customer of this.customers.values()) {
+            console.log(customer.name);
+        }
+    }
+
+    listProducts() {
+        for (const product of this.products.values()) {
+            console.log(product.name + " - R$" + product.price);
+        }
+    }
+
+    calculateTotalProducts() {
+        let total = 0;
+        for (const product of this.products.values()) {
+            total += product.price * product.quantity;
+        }
+        return total;
+    }
+
+    searchProduct(productName) {
+        for (const product of this.products.values()) {
+            if (productName === product.name) {
+                console.log(product.name + " - R$" + product.price);
+            }
+        }
+    }
+
+    makePayment(email, amount) {
+        if (Number.isInteger(amount)) {
+            throw new Error("Amount must be a non-integer number");
+        }
+        const customer = this.customers.get(email);
+        if (customer) {
+            if (customer.balance >= amount) {
+                customer.balance -= amount;
+                console.log("Pagamento realizado com sucesso!");
+            } else {
+                console.log("Saldo insuficiente!");
+            }
+        } else {
+            console.log("Cliente não encontrado!");
+        }
+    }
+}
+
+const supermarket = new Supermarket();
+
+const customer1 = new Customer("Luan Silva", "luan.silva@example.com", 1000.50);
+const customer2 = new Customer("Nicolas Oliveira", "nicolas.oliveira@example.com", 500.25);
+const customer3 = new Customer("Bryan Santos", "bryan.santos@example.com", 2000.75);
+
+supermarket.addCustomer(customer1);
+supermarket.addCustomer(customer2);
+supermarket.addCustomer(customer3);
+
+const product1 = new Product("Arroz", 10.99, 50);
+const product2 = new Product("Feijão", 5.99, 20);
+const product3 = new Product("Carne", 20.99, 30);
+
+supermarket.addProduct(product1);
+supermarket.addProduct(product2);
+supermarket.addProduct(product3);
+
+while (true) {
+    console.log("Opções:");
+    console.log("1. Listar clientes");
+    console.log("2. Listar produtos");
+    console.log("3. Buscar produto");
+    console.log("4. Realizar pagamento");
+    console.log("5. Sair");
+
+    const option = prompt("Digite a opção desejada:");
+
+    switch (option) {
+        case "1":
+            supermarket.listCustomers();
+            break;
+        case "2":
+            supermarket.listProducts();
+            break;
+        case "3":
+            const productName = prompt("Digite o nome do produto:");
+            supermarket.searchProduct(productName);
+            break;
+        case "4":
+            const email = prompt("Digite o email do cliente:");
+            const amount = parseFloat(prompt("Digite o valor do pagamento:"));
+            supermarket.makePayment(email, amount);
+            break;
+        case "5":
+            console.log("Saindo...");
+            break;
+        default:
+            console.log("Opção inválida!");
+    }
+}
