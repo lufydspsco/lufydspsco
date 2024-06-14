@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora de Compras</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      background-color: #333;
+      color: #fff;
+      padding: 10px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+    }
+    .customer-info {
+      margin-bottom: 20px;
+    }
+    .customer-info label {
+      display: block;
+      margin-bottom: 10px;
+    }
+    .customer-info input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+    }
+    .product-list {
+      margin-bottom: 20px;
+    }
+    .product-list ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .product-list li {
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+    .product-list li:last-child {
+      border-bottom: none;
+    }
+    .product-list span {
+      font-weight: bold;
+    }
+    .total {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Calculadora de Compras</h1>
+    </div>
+    <div class="customer-info">
+      <label for="customer-name">Nome do cliente:</label>
+      <input type="text" id="customer-name" value="Luan Gerhard Radun">
+      <label for="customer-age">Idade do cliente:</label>
+      <input type="number" id="customer-age" value="18">
+    </div>
+    <div class="product-list">
+      <h2>Produtos:</h2>
+      <ul id="product-list">
+        <!-- produtos serão adicionados aqui -->
+      </ul>
+    </div>
+    <div class="total">
+      Total: R$ <span id="total">0.00</span>
+    </div>
+    <button id="add-product-btn">Adicionar produto</button>
+    <button id="calculate-total-btn">Calcular total</button>
+  </div>
+
+  <script>
+    // código JavaScript aqui
+    let customers = [
+      new CalculadoraDeCompras("Luan", 18),
+      new CalculadoraDeCompras("Nicolas", 18),
+      new CalculadoraDeCompras("Bryan", 18),
+    ];
+
+    function findCustomerByName(name) {
+      for (let customer of customers) {
+        if (customer.nome.toLowerCase() === name.toLowerCase()) {
+          return customer;
+        }
+      }
+      return null;
+    }
+
+    let customerNameInput = document.getElementById("customer-name");
+    let customerAgeInput = document.getElementById("customer-age");
+    let productList = document.getElementById("product-list");
+    let totalElement = document.getElementById("total");
+    let addProductBtn = document.getElementById("add-product-btn");
+    let calculateTotalBtn = document.getElementById("calculate-total-btn");
+
+    addProductBtn.addEventListener("click", () => {
+      let customerName = customerNameInput.value;
+      let customer = findCustomerByName(customerName);
+      if (customer) {
+        let produto = prompt("Digite o nome do produto:");
+        let preco = parseFloat(prompt("Digite o preço do produto:"));
+        let quantidade = parseInt(prompt("Digite a quantidade do produto:"));
+        customer.addProduto(produto, preco, quantidade);
+        let productListHtml = "";
+        for (let produto in customer.listaDeCompras) {
+          productListHtml += `<li>${produto}: R$ ${customer.listaDeCompras[produto].toFixed(2)}</li>`;
+        }
+        productList.innerHTML = productListHtml;
+      } else {
+        alert("Cliente não encontrado!");
+      }
+    });
+
+    calculateTotalBtn.addEventListener("click", () => {
+      let customerName = customerNameInput.value;
+      let customer = findCustomerByName(customerName);
+      if (customer) }
+        let total = 0;
+        for ()
