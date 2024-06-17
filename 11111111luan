@@ -1,0 +1,66 @@
+let cliente = {
+    nome: "Luan Gerhard Radun",
+    idade: 18,
+    listaDeCompras: {}
+  };
+  
+  let produtosDisponiveis = {
+    "Arroz": 2.50,
+    "Feijão": 3.00,
+    "Ovo": 1.50,
+    "Leite": 4.00,
+    "Pão": 1.00,
+    "Queijo": 5.00,
+    "Café": 10.00
+  };
+  
+  function addProduto(produto, preco, quantidade) {
+    cliente.listaDeCompras[produto] = preco * quantidade;
+  }
+  
+  console.log("Bem-vindo ao mercado!");
+  console.log("Produtos disponíveis:");
+  for (let produto in produtosDisponiveis) {
+    console.log(`- ${produto}: R$ ${produtosDisponiveis[produto].toFixed(2)}`);
+  }
+  console.log("Digite 'add <produto> <quantidade>' para adicionar um produto.");
+  console.log("Digite 'list' para listar os produtos.");
+  console.log("Digite 'total' para calcular o total.");
+  
+  const readline = require('readline').createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+  
+  readline.question("> ", command => {
+    const [action, product, quantity] = command.split(' ');
+  
+    switch (action) {
+      case 'add':
+        if (produtosDisponiveis[product]) {
+          addProduto(product, produtosDisponiveis[product], parseInt(quantity));
+        } else {
+          console.log("Produto não encontrado!");
+        }
+        break;
+      case 'list':
+        console.log("Produtos:");
+        for (let produto in cliente.listaDeCompras) {
+          console.log(`- ${produto}: R$ ${cliente.listaDeCompras[produto].toFixed(2)}`);
+        }
+        break;
+      case 'total':
+        let total = 0;
+        for (let produto in cliente.listaDeCompras) {
+          total += cliente.listaDeCompras[produto];
+        }
+        console.log(`Total: R$ ${total.toFixed(2)}`);
+        break;
+      default:
+        console.log("Comando desconhecido. Tente novamente!");
+    }
+  
+    readline.question("> ", command => {
+      //...
+    });
+  });
