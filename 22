@@ -1,0 +1,45 @@
+cliente = {"nome": "Luan Gerhard Radun", "idade": 18, "lista_de_compras": {}}
+produtos_disponiveis = {"Arroz": 2.50, "Feijão": 3.00, "Ovo": 1.50, "Leite": 4.00, "Pão": 1.00, "Queijo": 5.00, "Café": 10.00}
+
+def add_produto(produto, quantidade):
+    if produto in produtos_disponiveis:
+        cliente["lista_de_compras"][produto] = produtos_disponiveis[produto] * quantidade
+        print(f"Produto '{produto}' adicionado com sucesso!")
+    else:
+        print("Produto não encontrado!")
+
+def list_produto():
+    if not cliente["lista_de_compras"]:
+        print("Você não adicionou nenhum produto à lista de compras.")
+    else:
+        print("Produtos:")
+        for produto, preco in cliente["lista_de_compras"].items():
+            print(f"- {produto}: R$ {preco:.2f}")
+
+def total_produto():
+    if not cliente["lista_de_compras"]:
+        print("Você não adicionou nenhum produto à lista de compras.")
+    else:
+        total = sum(cliente["lista_de_compras"].values())
+        print(f"Total: R$ {total:.2f}")
+
+while True:
+    command = input("> ").split()
+    action = command[0]
+
+    if action == "add":
+        if len(command)!= 3:
+            print()
+            continue
+        produto = command[1]
+        quantidade = int(command[2])
+        add_produto(produto, quantidade)
+    elif action == "list":
+        list_produto()
+    elif action == "total":
+        total_produto()
+    elif action == "exit":
+        print("Até logo!")
+        break
+    else:
+        print("Comando desconhecido. Tente novamente!")
