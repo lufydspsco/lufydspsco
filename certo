@@ -1,0 +1,133 @@
+import datetime
+
+cliente = {"nome": "Luan Gerhard Radun", "idade": 18, "lista_de_compras": {}, "historico_de_compras": []}
+
+produtos_disponiveis = {
+    "Arroz": 2.50,
+    "Feijão": 3.00,
+    "Ovo": 1.50,
+    "Leite": 4.00,
+    "Pão": 1.00,
+    "Queijo": 5.00,
+    "Café": 10.00
+}
+
+def adicionar_produto(produto, quantidade):
+    if produto in produtos_disponiveis:
+        if quantidade > 0:
+            if produto in cliente["lista_de_compras"]:
+                cliente["lista_de_compras"][produto] += quantidade
+            else:
+                cliente["lista_de_compras"][produto] = quantidade
+            print(f"{quantidade} unidades de '{produto}' adicionadas com sucesso!")
+        else:
+            print("A quantidade precisa ser maior que zero.")
+    else:
+        print("Produto não disponível.")
+
+def listar_produtos():
+    if cliente["lista_de_compras"]:
+        print("Lista de Compras:")
+        total = 0
+        for produto, quantidade in cliente["lista_de_compras"].items():
+            preco_total = produtos_disponiveis[produto] * quantidade
+            print(f"- {produto}: {quantidade} unidades, totalizando R$ {preco_total:.2f}")
+            total += preco_total
+        print(f"Total geral: R$ {total:.2f}")
+    else:
+        print("Lista de compras vazia.")
+
+def remover_produto(produto, quantidade):
+    if produto in cliente["lista_de_compras"]:
+        if quantidade >= cliente["lista_de_compras"][produto]:
+            del cliente["lista_de_compras"][produto]
+            print(f"'{produto}' removido da lista de compras.")
+        else:
+            cliente["lista_de_compras"][produto] -= quantidade
+            print(f"{quantidade} unidades de '{produto}' removidas.")
+    else:
+        print("Produto não está na lista de compras.")
+
+def total_compra():
+    total = sum(produtos_disponiveis[produto] * quantidade for produto, quantidade in cliente["lista_de_compras"].items())
+    print(f"Total da compra: R$ {total:.2f}")
+
+def finalizar_compra():
+    if cliente["lista_de_compras"]:
+        compra = {
+            "data": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "itens": cliente["lista_de_compras"].copy()
+        }
+        cliente["historico_de_compras"].append(compra)
+        cliente["lista_de_compras"].clear()
+        print("Compra finalizada com sucesso e adicionada ao histórico.")
+    else:
+        print("A lista de compras está vazia. Não é possível finalizar a compra.")
+
+def listar_historico():
+    if cliente["historico_de_compras"]:
+        print("Histórico de Compras:")
+        for compra in cliente["historico_de_compras"]:
+            print(f"Data: {compra['data']}")
+            for produto, quantidade in compra["itens"].items():
+                preco_total = produtos_disponiveis[produto] * quantidade
+                print(f"  - {produto}: {quantidade} unidades, totalizando R$ {preco_total:.2f}")
+            print()
+    else:
+        print("Nenhuma compra no histórico.")
+
+def sair():
+    print("Até logo!")
+
+def main():
+    while True:
+        comando = input("Digite o comando (add, remove, list, total, finalizar, historico, exit): ").strip().split()
+
+        if not comando:
+            continue
+
+        acao = comando[0].lower()
+
+        if acao == "add":
+            if len(comando) == 3:
+                produto = comando[1]
+                try:
+                    quantidade = int(comando[2])
+                    adicionar_produto(produto, quantidade)
+                except ValueError:
+                    print("Quantidade inválida. Informe um número inteiro.")
+            else:
+                print("Uso correto: add <produto> <quantidade>")
+        
+        elif acao == "remove":
+            if len(comando) == 3:
+                produto = comando[1]
+                try:
+                    quantidade = int(comando[2])
+                    remover_produto(produto, quantidade)
+                except ValueError:
+                    print("Quantidade inválida. Informe um número inteiro.")
+            else:
+                print("Uso correto: remove <produto> <quantidade>")
+
+        elif acao == "list":
+            listar_produtos()
+
+        elif acao == "total":
+            total_compra()
+
+        elif acao == "finalizar":
+            finalizar_compra()
+
+        elif acao == "historico":
+            listar_historico()
+
+        elif acao == "exit":
+            sair()
+            break
+
+        else:
+            print("Comando desconhecido. Tente novamente.")
+
+if __name__ == "__main__":
+    main()
