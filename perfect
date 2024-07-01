@@ -1,0 +1,214 @@
+import datetime
+
+def carregar_clientes():
+    clientes = {}
+    try:
+        with open('clientes.txt', 'r') as file:
+            for line in file:
+                nome, senha = line.strip().split(',')
+                clientes[nome] = senha
+    except FileNotFoundError:
+        print("Arquivo de clientes não encontrado. Criando novo arquivo.")
+        with open('clientes.txt', 'w'):
+            pass 
+    return clientes
+
+def salvar_clientes(clientes):
+    with open('clientes.txt', 'w') as file:
+        for nome, senha in clientes.items():
+            file.write(f"{nome},{senha}\n")
+
+clientes = carregar_clientes()
+
+produtos_disponiveis = {
+    "Arroz": 2.50,
+    "Feijão": 3.00,
+    "Ovo": 1.50,
+    "Leite": 4.00,
+    "Pão": 1.00,
+    "Queijo": 5.00,
+    "Café": 10.00,
+    "Açúcar": 2.00,
+    "Óleo": 7.00,
+    "Farinha": 2.50
+}
+#Esta função permite que um novo cliente se cadastre no sistema.(cadastrar cliente )
+def cadastrar_cliente():
+    nome = input("Digite seu nome: ")
+    senha = input("Digite sua senha: ")
+    clientes[nome] = senha
+    salvar_clientes(clientes)
+    print("Cadastro realizado com sucesso!")
+
+def fazer_login():
+    nome = input("Digite seu nome: ")
+    senha = input("Digite sua senha: ")
+    if nome in clientes and clientes[nome] == senha:
+        print(f"Bem-vindo, {nome}!")
+        return nome
+    else:
+        print("Nome de usuário ou senha incorretos.")
+        return None
+    
+def adicionar_produto(carrinho):
+    while True:
+        print("\nProdutos Disponíveis:")
+        for idx, (produto, preco) in enumerate(produtos_disponiveis.items(), 1):
+            print(f"{idx}. {produto} - R$ {preco:.2f}")
+        try:
+            escolha = int(input("Escolha o número do produto que deseja adicionar ao carrinho (ou 0 para finalizar): "))
+            if escolha == 0:
+                break
+            elif 1 <= escolha <= len(produtos_disponiveis):
+                produto = list(produtos_disponiveis.keys())[escolha - 1]
+                quantidade = int(input(f"Quantidade de '{produto}': "))
+                if quantidade > 0:
+                    if produto in carrinho:
+                        carrinho[produto] += quantidade
+                    else:
+                        carrinho[produto] = quantidade
+                    print(f"{quantidade} unidades de '{produto}' adicionadas ao carrinho.")
+                else:
+                    print("A quantidade precisa ser maior que zero.")
+            else:
+                print("Opção inválida.")
+        except ValueError:
+            print("Opção inválida.")
+
+def remover_produto(carrinho):
+    if not carrinho:
+        print("Carrinho vazio.")
+        return
+    print("\nProdutos no Carrinho:")
+    for idx, produto in enumerate(carrinho, 1):
+        print(f"{idx}. {produto} - Quantidade: {carrinho[produto]}")
+    try:
+        escolha = int(input("Escolha o número do produto que deseja remover (ou 0 para cancelar): "))
+        if escolha == 0:
+            return
+        elif 1 <= escolha <= len(carrinho):
+            produto = list(carrinho.keys())[escolha - 1]
+            quantidade = int(input(f"Quantidade a remover de '{produto}': "))
+            if quantidade > 0:
+                if quantidade >= carrinho[produto]:
+                    del carrinho[produto]
+                else:
+                    carrinho[produto] -= quantidade
+                print(f"{quantidade} unidades de '{produto}' removidas do carrinho.")
+            else:
+                print("A quantidade precisa ser maior que zero.")
+        else:
+            print("Opção inválida.")
+    except ValueError:
+        print("Opção inválida.")
+
+def listar_produtos(carrinho):
+    if not carrinho:
+        print("Carrinho vazio.")
+    else:
+        print("\nProdutos no Carrinho:")
+        total = 0
+        for produto, quantidade in carrinho.items():
+            preco_total = produtos_disponiveis[produto] * quantidade
+            print(f"- {produto}: {quantidade} unidades, totalizando R$ {preco_total:.2f}")
+            total += preco_total
+        print(f"Total geral: R$ {total:.2f}")
+
+def mostrar_catalogo():
+    print("\nProdutos Disponíveis:")
+    for produto, preco in produtos_disponiveis.items():
+        print(f"- {produto}: R$ {preco:.2f}")
+
+def finalizar_compra(carrinho, historico, cliente):
+    if not carrinho:
+        print("Carrinho vazio. Nada a finalizar.")
+        return
+    
+    data = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    historico.append({"data": data, "cliente": cliente, "itens": carrinho.copy()})
+    total_compra = sum(produtos_disponiveis[produto] * quantidade for produto, quantidade in carrinho.items())
+
+    with open(f"{cliente}_compras.txt", "a") as file:
+        file.write(f"Data: {data}\n")
+        for produto, quantidade in carrinho.items():
+            file.write(f"- {produto}: {quantidade} unidades\n")
+        file.write(f"Total: R$ {total_compra:.2f}\n\n")
+
+    carrinho.clear()
+    print("Compra finalizada com sucesso e adicionada ao histórico.")
+
+def mostrar_historico(historico):
+    if not historico:
+        print("Nenhuma compra no histórico.")
+    else:
+        print("\nHistórico de Compras:")
+        for compra in historico:
+            print(f"Data: {compra['data']}")
+            print(f"Cliente: {compra['cliente']}")
+            for produto, quantidade in compra["itens"].items():
+                preco_total = produtos_disponiveis[produto] * quantidade
+                print(f"  - {produto}: {quantidade} unidades, totalizando R$ {preco_total:.2f}")
+            print() 
+def main():
+    carrinho = {}
+    historico = []
+    cliente_logado = None
+
+    while True:
+
+        print("\n=== Menu ===")
+        print("1. Cadastrar novo cliente")
+        print("2. Fazer login")
+        print("3. Visualizar catálogo de produtos")
+        print("4. Adicionar produto ao carrinho")
+        print("5. Remover produto do carrinho")
+        print("6. Listar produtos no carrinho")
+        print("7. Finalizar compra")
+        print("8. Mostrar histórico de compras")
+        print("9. Sair")
+        
+        try:
+            opcao = int(input("Escolha uma opção: "))
+            
+            if opcao == 1:
+                cadastrar_cliente()
+            elif opcao == 2:
+                cliente_logado = fazer_login()
+            elif opcao == 3:
+                mostrar_catalogo()
+            elif opcao == 4:
+                if cliente_logado:
+                    adicionar_produto(carrinho)
+                else:
+                    print("Faça login primeiro.")
+            elif opcao == 5:
+                if cliente_logado:
+                    remover_produto(carrinho)
+                else:
+                    print("Faça login primeiro.")
+            elif opcao == 6:
+                if cliente_logado:
+                    listar_produtos(carrinho)
+                else:
+                    print("Faça login primeiro.")
+            elif opcao == 7:
+                if cliente_logado:
+                    finalizar_compra(carrinho, historico, cliente_logado)
+                else:
+                    print("Faça login primeiro.")
+            elif opcao == 8:
+                if cliente_logado:
+                    mostrar_historico(historico)
+                else:
+                    print("Faça login primeiro.")
+            elif opcao == 9:
+                print("Saindo...")
+                break
+            else:
+                print("Opção inválida. Tente novamente.")
+        
+        except ValueError:
+            print("Opção inválida. Tente novamente.")
+
+if __name__ == "__main__":
+    main()
