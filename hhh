@@ -1,0 +1,152 @@
+const readline = require('readline');
+const fs = require('fs');
+
+// Cliente
+class Cliente {
+    constructor(nome, saldo) {
+        this.nome = nome;
+        this.saldo = saldo;
+    }
+
+    debitarSaldo(valor) {
+        if (this.saldo >= valor) {
+            this.saldo -= valor;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    toString() {
+        return `Cliente: ${this.nome} | Saldo: R$${this.saldo.toFixed(2)}`;
+    }
+}
+
+// Produto
+class Produto {
+    constructor(codigo, nome, preco, quantidade) {
+        this.codigo = codigo;
+        this.nome = nome;
+        this.preco = preco;
+        this.quantidade = quantidade;
+    }
+
+    toString() {
+        return `Código: ${this.codigo} | Produto: ${this.nome} | Preço: R$${this.preco.toFixed(2)} | Estoque: ${this.quantidade}`;
+    }
+}
+
+// Lista de clientes registrados (nome de usuário e senha)
+const clientesRegistrados = [
+    { username: 'user1', password: 'pass1', nome: 'Cliente 1', saldo: 100.0 },
+    { username: 'user2', password: 'pass2', nome: 'Cliente 2', saldo: 150.0 }
+];
+
+// para imprimir o catálogo de produtos
+function imprimirCatalogo(produtos) {
+    console.log("===== Catálogo de Produtos =====");
+    produtos.forEach(produto => {
+        console.log(produto.toString());
+    });
+}
+
+// para realizar a compra
+function realizarCompra(cliente, produtos) {
+    const carrinho = [];
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    imprimirCatalogo(produtos);
+    rl.question("Digite o código do produto (ou 'fim' para finalizar compra): ", codigo => {
+        while (codigo.toLowerCase() !== 'fim') {
+            const produto = produtos.find(p => p.codigo === codigo);
+            if (produto) {
+                if (produto.quantidade > 0) {
+                    carrinho.push(produto);
+                    produto.quantidade--;
+                    console.log(`Produto '${produto.nome}' adicionado ao carrinho.`);
+                } else {
+                    console.log("Produto indisponível no estoque.");
+                }
+            } else {
+                console.log("Código inválido. Tente novamente.");
+            }
+            rl.question("Digite o código do produto (ou 'fim' para finalizar compra): ", codigo => {});
+        }
+
+        rl.close();
+        if (carrinho.length > 0) {
+            const totalCompra = carrinho.reduce((total, produto) => total + produto.preco, 0);
+            console.log(`Total da compra: R$${totalCompra.toFixed(2)}`);
+
+            if (cliente.debitarSaldo(totalCompra)) {
+                gerarNotaFiscal(cliente, carrinho);
+                console.log("Compra realizada com sucesso!");
+            } else {
+                console.log("Saldo insuficiente para realizar a compra.");
+            }
+        }
+    });
+}
+
+// nota fiscal
+function gerarNotaFiscal(cliente, carrinho) {
+    const numNota = fs.readdirSync('./notas_fiscais').length + 1;
+    const dataHora = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').replace(/\..+/, '');
+    const nomeArquivo = `./notas_fiscais/nota_fiscal_${numNota}_${dataHora}.txt`;
+    
+    let conteudoNota = `Nota Fiscal\n`;
+    conteudoNota += `Cliente: ${cliente.nome}\n`;
+    conteudoNota += `Data: ${new Date().toLocaleString()}\n`;
+    conteudoNota += `==============================\n`;
+    carrinho.forEach(produto => {
+        conteudoNota += `${produto.toString()}\n`;
+    });
+    conteudoNota += `==============================\n`;
+    conteudoNota += `Total: R$${carrinho.reduce((total, produto) => total + produto.preco, 0).toFixed(2)}\n`;
+
+    fs.writeFileSync(nomeArquivo, conteudoNota);
+    console.log(`Nota fiscal gerada: ${nomeArquivo}`);
+}
+
+// Função para realizar o login do cliente
+function realizarLogin(callback) {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    rl.question("Digite seu nome de usuário: ", username => {
+        rl.question("Digite sua senha: ", password => {
+            const clienteEncontrado = clientesRegistrados.find(cliente => cliente.username === username && cliente.password === password);
+            rl.close();
+            if (clienteEncontrado) {
+                console.log(`Bem-vindo, ${clienteEncontrado.nome}!`);
+                callback(new Cliente(clienteEncontrado.nome, clienteEncontrado.saldo));
+            } else {
+                console.log("Nome de usuário ou senha incorretos. Tente novamente.");
+                realizarLogin(callback);
+            }
+        });
+    });
+}
+
+// Array inicial de produtos
+const estoque = [
+    new Produto('1', 'Arroz', 10.0, 50),
+    new Produto('2', 'Feijão', 8.0, 30),
+    new Produto('3', 'Óleo', 5.0, 20)
+];
+
+// Função principal
+function main() {
+    console.log("===== Bem-vindo ao Sistema de Vendas =====");
+    realizarLogin(cliente => {
+        realizarCompra(cliente, estoque);
+    });
+}
+
+// Execução principal
+main();
