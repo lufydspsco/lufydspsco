@@ -1,0 +1,223 @@
+const readline = require('readline');
+const fs = require('fs').promises;
+
+// Classes
+class Cliente {
+    constructor(username, password, nome, saldo) {
+        this.username = username;
+        this.password = password;
+        this.nome = nome;
+        this.saldo = saldo;
+    }
+
+    debitarSaldo(valor) {
+        if (this.saldo >= valor) {
+            this.saldo -= valor;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    toString() {
+        return `Cliente: ${this.nome} | Saldo: R$${this.saldo.toFixed(2)}`;
+    }
+}
+
+class Produto {
+    constructor(codigo, nome, preco, quantidade) {
+        this.codigo = codigo;
+        this.nome = nome;
+        this.preco = preco;
+        this.quantidade = quantidade;
+    }
+
+    toString() {
+        return `Código: ${this.codigo} | Produto: ${this.nome} | Preço: R$${this.preco.toFixed(2)} | Estoque: ${this.quantidade}`;
+    }
+}
+
+// Variáveis globais
+let clientesRegistrados = [];
+const estoque = [
+    new Produto('1', 'Arroz', 10.0, 50),
+    new Produto('2', 'Feijão', 8.0, 30),
+    new Produto('3', 'Óleo', 5.0, 20),
+    new Produto('4', 'Maçã', 2.5, 100),
+    new Produto('5', 'Alface', 3.0, 50),
+    new Produto('6', 'Laranja', 3.0, 80),
+    new Produto('7', 'Tomate', 4.0, 40)
+];
+
+// Interface de leitura
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+// Função para imprimir o catálogo de produtos
+function imprimirCatalogo(produtos) {
+    console.log("===== Catálogo de Produtos =====");
+    produtos.forEach(produto => {
+        console.log(produto.toString());
+    });
+}
+
+// Função para realizar a compra
+function realizarCompra(cliente, produtos) {
+    const carrinho = [];
+
+    imprimirCatalogo(produtos);
+
+    function adicionarProduto() {
+        rl.question("Digite o código do produto (ou 'fim' para finalizar compra): ", codigo => {
+            if (codigo.toLowerCase() === 'fim') {
+                rl.close();
+                if (carrinho.length > 0) {
+                    const totalCompra = carrinho.reduce((total, produto) => total + produto.preco, 0);
+                    console.log(`Total da compra: R$${totalCompra.toFixed(2)}`);
+
+                    if (cliente.debitarSaldo(totalCompra)) {
+                        gerarNotaFiscal(cliente, carrinho);
+                        console.log("Compra realizada com sucesso!");
+                    } else {
+                        console.log("Saldo insuficiente para realizar a compra.");
+                    }
+                }
+            } else {
+                const produto = produtos.find(p => p.codigo === codigo);
+                if (produto) {
+                    if (produto.quantidade > 0) {
+                        carrinho.push(produto);
+                        produto.quantidade--;
+                        console.log(`Produto '${produto.nome}' adicionado ao carrinho.`);
+                    } else {
+                        console.log("Produto indisponível no estoque.");
+                    }
+                } else {
+                    console.log("Código inválido. Tente novamente.");
+                }
+                adicionarProduto(); // Chamada recursiva para continuar o processo
+            }
+        });
+    }
+
+    adicionarProduto(); // Inicia o processo de adição de produtos
+}
+
+// Função para gerar nota fiscal
+async function gerarNotaFiscal(cliente, carrinho) {
+    const notasFiscaisDir = './notas_fiscais';
+
+    try {
+        // Check if notas_fiscais directory exists, if not, create it
+        await fs.access(notasFiscaisDir);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            // Directory does not exist, create it
+            await fs.mkdir(notasFiscaisDir);
+        } else {
+            throw error; // Throw other errors for handling
+        }
+    }
+
+    // Proceed to generate the invoice file
+    const numNota = (await fs.readdir(notasFiscaisDir)).length + 1;
+    const dataHora = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').replace(/\..+/, '');
+    const nomeArquivo = `${notasFiscaisDir}/nota_fiscal_${numNota}_${dataHora}.txt`;
+
+    let conteudoNota = `Nota Fiscal\n`;
+    conteudoNota += `Cliente: ${cliente.nome}\n`;
+    conteudoNota += `Data: ${new Date().toLocaleString()}\n`;
+    conteudoNota += `==============================\n`;
+    carrinho.forEach(produto => {
+        conteudoNota += `${produto.toString()}\n`;
+    });
+    conteudoNota += `==============================\n`;
+    conteudoNota += `Total: R$${carrinho.reduce((total, produto) => total + produto.preco, 0).toFixed(2)}\n`;
+
+    await fs.writeFile(nomeArquivo, conteudoNota);
+    console.log(`Nota fiscal gerada: ${nomeArquivo}`);
+}
+
+
+// Função para realizar o login do cliente
+async function realizarLogin() {
+    console.log("===== Login de Cliente =====");
+
+    const username = await perguntaAsync("Digite seu nome de usuário: ");
+    const password = await perguntaAsync("Digite sua senha: ");
+
+    const clienteEncontrado = clientesRegistrados.find(cliente => cliente.username === username && cliente.password === password);
+    if (clienteEncontrado) {
+        console.log(`Bem-vindo, ${clienteEncontrado.nome}!`);
+        return clienteEncontrado;
+    } else {
+        console.log("Nome de usuário ou senha incorretos. Tente novamente.");
+        return realizarLogin();
+    }
+}
+
+// Função para cadastrar novo cliente
+async function cadastrarNovoCliente() {
+    console.log("===== Cadastro de Novo Cliente =====");
+
+    const username = await perguntaAsync("Escolha um nome de usuário: ");
+    // Verificar se o username já está em uso
+    if (clientesRegistrados.some(cliente => cliente.username === username)) {
+        console.log("Nome de usuário já está em uso. Escolha outro.");
+        return cadastrarNovoCliente();
+    }
+
+    const password = await perguntaAsync("Escolha uma senha: ");
+    const nome = await perguntaAsync("Digite seu nome: ");
+    const saldo = parseFloat(await perguntaAsync("Digite seu saldo inicial: "));
+
+    const novoCliente = new Cliente(username, password, nome, saldo);
+    clientesRegistrados.push(novoCliente);
+    console.log(`Cliente ${nome} cadastrado com sucesso!`);
+}
+
+// Função auxiliar para realizar perguntas de forma assíncrona
+function perguntaAsync(pergunta) {
+    return new Promise(resolve => {
+        rl.question(pergunta, resposta => {
+            resolve(resposta);
+        });
+    });
+}
+
+// Função principal
+async function main() {
+    console.log("===== Bem-vindo ao Sistema de Vendas =====");
+
+    while (true) {
+        console.log("\nEscolha uma opção:");
+        console.log("1. Login");
+        console.log("2. Cadastrar novo cliente");
+        console.log("3. Sair");
+
+        const opcao = await perguntaAsync("Opção: ");
+
+        switch (opcao) {
+            case '1':
+                const cliente = await realizarLogin();
+                if (cliente) {
+                    realizarCompra(cliente, estoque);
+                }
+                break;
+            case '2':
+                await cadastrarNovoCliente();
+                break;
+            case '3':
+                console.log("Saindo do sistema...");
+                rl.close();
+                return;
+            default:
+                console.log("Opção inválida. Tente novamente.");
+        }
+    }
+}
+
+// Execução principal
+main().catch(err => console.error(err));
