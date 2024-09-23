@@ -1,0 +1,367 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#define MAX_FILMES 100
+#define MAX_CLIENTES 100
+#define MAX_CARRINHO 10
+
+typedef struct {
+    char titulo[50];
+    float preco;
+    char categoria[20];
+    int estoque; // Estoque do filme
+} Filme;
+
+typedef struct {
+    char nome[50];
+    char senha[50];
+} Cliente;
+
+typedef struct {
+    Filme filmes[MAX_FILMES];
+    Cliente clientes[MAX_CLIENTES];
+    int totalFilmes;
+    int totalClientes;
+} Mercado;
+
+typedef struct {
+    Filme *filme;
+    int tempoAluguel; // Tempo em dias
+} ItemCarrinho;
+
+void carregar_clientes(Mercado *mercado) {
+    FILE *file = fopen("clientes.txt", "r");
+    if (!file) {
+        printf("Arquivo de clientes não encontrado. Criando novo arquivo.\n");
+        return;
+    }
+
+    while (fscanf(file, "%[^,],%s\n", mercado->clientes[mercado->totalClientes].nome,
+                  mercado->clientes[mercado->totalClientes].senha) != EOF) {
+        mercado->totalClientes++;
+    }
+    fclose(file);
+}
+
+void salvar_clientes(Mercado *mercado) {
+    FILE *file = fopen("clientes.txt", "w");
+    for (int i = 0; i < mercado->totalClientes; i++) {
+        fprintf(file, "%s,%s\n", mercado->clientes[i].nome, mercado->clientes[i].senha);
+    }
+    fclose(file);
+}
+
+void cadastrar_cliente(Mercado *mercado) {
+    if (mercado->totalClientes >= MAX_CLIENTES) {
+        printf("Limite de clientes atingido.\n");
+        return;
+    }
+
+    Cliente cliente;
+    printf("Digite seu nome: ");
+    scanf("%s", cliente.nome);
+    printf("Digite sua senha: ");
+    scanf("%s", cliente.senha);
+
+    mercado->clientes[mercado->totalClientes++] = cliente;
+    salvar_clientes(mercado);
+    printf("Cadastro realizado com sucesso!\n");
+}
+
+int fazer_login(Mercado *mercado) {
+    char nome[50], senha[50];
+    printf("Digite seu nome: ");
+    scanf("%s", nome);
+    printf("Digite sua senha: ");
+    scanf("%s", senha);
+
+    for (int i = 0; i < mercado->totalClientes; i++) {
+        if (strcmp(mercado->clientes[i].nome, nome) == 0 &&
+            strcmp(mercado->clientes[i].senha, senha) == 0) {
+            printf("Bem-vindo, %s!\n", nome);
+            return i;  // Retorna o índice do cliente logado
+        }
+    }
+    printf("Nome de usuário ou senha incorretos.\n");
+    return -1;
+}
+
+void listar_filmes(Mercado *mercado) {
+    printf("\n=== Catálogo de Filmes ===\n");
+    for (int i = 0; i < mercado->totalFilmes; i++) {
+        printf("%d. %s - R$ %.2f (Estoque: %d)\n", i + 1,
+               mercado->filmes[i].titulo, mercado->filmes[i].preco,
+               mercado->filmes[i].estoque);
+    }
+}
+
+void adicionar_filme(ItemCarrinho *carrinho, Mercado *mercado, int *num_itens) {
+    int escolha;
+
+    printf("Escolha o número do filme para adicionar ao carrinho: ");
+    scanf("%d", &escolha);
+    escolha--;  // Ajuste para índice zero
+
+    if (escolha < 0 || escolha >= mercado->totalFilmes) {
+        printf("Filme não encontrado.\n");
+        return;
+    }
+
+    if (mercado->filmes[escolha].estoque <= 0) {
+        printf("Desculpe, '%s' não está disponível no momento.\n", mercado->filmes[escolha].titulo);
+        return;
+    }
+
+    int tempo;
+    printf("Tempo de aluguel (dias): ");
+    scanf("%d", &tempo);
+
+    if (*num_itens < MAX_CARRINHO) {
+        carrinho[*num_itens].filme = &mercado->filmes[escolha];
+        carrinho[*num_itens].tempoAluguel = tempo;
+        (*num_itens)++;
+        mercado->filmes[escolha].estoque--; // Reduz o estoque
+        printf("Adicionado '%s' ao carrinho por %d dia(s).\n", mercado->filmes[escolha].titulo, tempo);
+    } else {
+        printf("Carrinho cheio!\n");
+    }
+}
+
+void listar_carrinho(ItemCarrinho *carrinho, int num_itens) {
+    if (num_itens == 0) {
+        printf("Carrinho vazio.\n");
+        return;
+    }
+
+    printf("\nProdutos no Carrinho:\n");
+    for (int i = 0; i < num_itens; i++) {
+        printf("- %s: %d dia(s), totalizando R$ %.2f\n",
+               carrinho[i].filme->titulo, carrinho[i].tempoAluguel,
+               carrinho[i].filme->preco * carrinho[i].tempoAluguel);
+    }
+}
+
+void finalizar_compra(ItemCarrinho *carrinho, int num_itens, const char *cliente_nome) {
+    if (num_itens == 0) {
+        printf("Carrinho vazio. Nada a finalizar.\n");
+        return;
+    }
+
+    FILE *file = fopen("historico_compras.txt", "a");
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    fprintf(file, "Compra realizada por %s em %02d/%02d/%d %02d:%02d:%02d\n",
+            cliente_nome, tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900,
+            tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+    for (int i = 0; i < num_itens; i++) {
+        fprintf(file, "- %s: %d dia(s)\n",
+                carrinho[i].filme->titulo, carrinho[i].tempoAluguel);
+    }
+    fclose(file);
+
+    printf("Compra finalizada com sucesso!\n");
+}
+
+void inicializar_filmes(Mercado *mercado) {
+    strcpy(mercado->filmes[mercado->totalFilmes].titulo, "Vingadores: Ultimato");
+    mercado->filmes[mercado->totalFilmes].preco = 19.99;
+    strcpy(mercado->filmes[mercado->totalFilmes].categoria, "Ação");
+    mercado->filmes[mercado->totalFilmes].estoque = 5; // Estoque inicial
+    mercado->totalFilmes++;
+
+    strcpy(mercado->filmes[mercado->totalFilmes].titulo, "Mad Max: Estrada da Fúria");
+    mercado->filmes[mercado->totalFilmes].preco = 24.99;
+    strcpy(mercado->filmes[mercado->totalFilmes].categoria, "Ação");
+    mercado->filmes[mercado->totalFilmes].estoque = 3; // Estoque inicial
+    mercado->totalFilmes++;
+
+    strcpy(mercado->filmes[mercado->totalFilmes].titulo, "A Morte Te Dá Parabéns");
+    mercado->filmes[mercado->totalFilmes].preco = 12.99;
+    strcpy(mercado->filmes[mercado->totalFilmes].categoria, "Terror");
+    mercado->filmes[mercado->totalFilmes].estoque = 4; // Estoque inicial
+    mercado->totalFilmes++;
+
+    strcpy(mercado->filmes[mercado->totalFilmes].titulo, "Zumbilândia");
+    mercado->filmes[mercado->totalFilmes].preco = 9.99;
+    strcpy(mercado->filmes[mercado->totalFilmes].categoria, "Comédia");
+    mercado->filmes[mercado->totalFilmes].estoque = 6; // Estoque inicial
+    mercado->totalFilmes++;
+
+    strcpy(mercado->filmes[mercado->totalFilmes].titulo, "A Bruxa");
+    mercado->filmes[mercado->totalFilmes].preco = 15.99;
+    strcpy(mercado->filmes[mercado->totalFilmes].categoria, "Terror");
+    mercado->filmes[mercado->totalFilmes].estoque = 2; // Estoque inicial
+    mercado->totalFilmes++;
+
+    strcpy(mercado->filmes[mercado->totalFilmes].titulo, "As Branquelas");
+    mercado->filmes[mercado->totalFilmes].preco = 8.99;
+    strcpy(mercado->filmes[mercado->totalFilmes].categoria, "Comédia");
+    mercado->filmes[mercado->totalFilmes].estoque = 5; // Estoque inicial
+    mercado->totalFilmes++;
+
+    strcpy(mercado->filmes[mercado->totalFilmes].titulo, "O Exorcista");
+    mercado->filmes[mercado->totalFilmes].preco = 11.99;
+    strcpy(mercado->filmes[mercado->totalFilmes].categoria, "Terror");
+    mercado->filmes[mercado->totalFilmes].estoque = 2; // Estoque inicial
+    mercado->totalFilmes++;
+}
+
+void adicionar_filme_adm(Mercado *mercado) {
+    if (mercado->totalFilmes >= MAX_FILMES) {
+        printf("Limite de filmes atingido.\n");
+        return;
+    }
+
+    Filme filme;
+    printf("Digite o título do filme: ");
+    scanf(" %[^\n]", filme.titulo); // Permitir espaços no título
+    printf("Digite o preço do filme: ");
+    scanf("%f", &filme.preco);
+    printf("Digite a categoria do filme: ");
+    scanf("%s", filme.categoria);
+    printf("Digite a quantidade em estoque: ");
+    scanf("%d", &filme.estoque);
+
+    mercado->filmes[mercado->totalFilmes++] = filme;
+    printf("Filme adicionado com sucesso!\n");
+}
+
+void remover_filme_adm(Mercado *mercado) {
+    int escolha;
+    printf("Escolha o número do filme para remover: ");
+    scanf("%d", &escolha);
+    escolha--; // Ajuste para índice zero
+
+    if (escolha < 0 || escolha >= mercado->totalFilmes) {
+        printf("Filme não encontrado.\n");
+        return;
+    }
+
+    for (int i = escolha; i < mercado->totalFilmes - 1; i++) {
+        mercado->filmes[i] = mercado->filmes[i + 1];
+    }
+    mercado->totalFilmes--;
+    printf("Filme removido com sucesso!\n");
+}
+
+void alterar_preco_adm(Mercado *mercado) {
+    int escolha;
+    printf("Escolha o número do filme para alterar o preço: ");
+    scanf("%d", &escolha);
+    escolha--; // Ajuste para índice zero
+
+    if (escolha < 0 || escolha >= mercado->totalFilmes) {
+        printf("Filme não encontrado.\n");
+        return;
+    }
+
+    float novo_preco;
+    printf("Digite o novo preço para '%s': ", mercado->filmes[escolha].titulo);
+    scanf("%f", &novo_preco);
+    mercado->filmes[escolha].preco = novo_preco;
+    printf("Preço alterado com sucesso!\n");
+}
+
+void menu_admin(Mercado *mercado) {
+    int admin_opcao;
+    printf("\n=== Menu Admin ===\n");
+    printf("1. Adicionar filme\n");
+    printf("2. Remover filme\n");
+    printf("3. Alterar preço de filme\n");
+    printf("Escolha uma opção: ");
+    scanf("%d", &admin_opcao);
+    switch (admin_opcao) {
+        case 1:
+            adicionar_filme_adm(mercado);
+            break;
+        case 2:
+            remover_filme_adm(mercado);
+            break;
+        case 3:
+            alterar_preco_adm(mercado);
+            break;
+        default:
+            printf("Opção inválida.\n");
+    }
+}
+
+int main() {
+    Mercado mercado = {0};
+    carregar_clientes(&mercado);
+    inicializar_filmes(&mercado);
+
+    // Adicionando os usuários administradores
+    strcpy(mercado.clientes[mercado.totalClientes].nome, "luan");
+    strcpy(mercado.clientes[mercado.totalClientes].senha, "123");
+    mercado.totalClientes++;
+
+    strcpy(mercado.clientes[mercado.totalClientes].nome, "raissa");
+    strcpy(mercado.clientes[mercado.totalClientes].senha, "123");
+    mercado.totalClientes++;
+
+    ItemCarrinho carrinho[MAX_CARRINHO];
+    int num_itens = 0;
+    int cliente_logado = -1;
+
+    while (1) {
+        printf("\n=== Menu ===\n");
+        printf("1. Cadastrar cliente\n");
+        printf("2. Fazer login\n");
+        printf("3. Visualizar catálogo de filmes\n");
+        printf("4. Adicionar filme ao carrinho\n");
+        printf("5. Ver carrinho\n");
+        printf("6. Finalizar compra\n");
+        printf("7. Menu Admin\n");
+        printf("8. Sair\n");
+        printf("Escolha uma opção: ");
+        int opcao;
+        scanf("%d", &opcao);
+
+        switch (opcao) {
+            case 1:
+                cadastrar_cliente(&mercado);
+                break;
+            case 2:
+                cliente_logado = fazer_login(&mercado);
+                break;
+            case 3:
+                listar_filmes(&mercado);
+                break;
+            case 4:
+                if (cliente_logado != -1) {
+                    adicionar_filme(carrinho, &mercado, &num_itens);
+                } else {
+                    printf("Você precisa fazer login primeiro.\n");
+                }
+                break;
+            case 5:
+                listar_carrinho(carrinho, num_itens);
+                break;
+            case 6:
+                if (cliente_logado != -1) {
+                    finalizar_compra(carrinho, num_itens, mercado.clientes[cliente_logado].nome);
+                    num_itens = 0; // Limpa o carrinho após a compra
+                } else {
+                    printf("Você precisa fazer login primeiro.\n");
+                }
+                break;
+            case 7:
+                if (cliente_logado != -1 && 
+                    (strcmp(mercado.clientes[cliente_logado].nome, "luan") == 0 || 
+                     strcmp(mercado.clientes[cliente_logado].nome, "raissa") == 0)) {
+                    menu_admin(&mercado);
+                } else {
+                    printf("Você não tem permissão para acessar o menu admin.\n");
+                }
+                break;
+            case 8:
+                printf("Saindo...\n");
+                return 0;
+            default:
+                printf("Opção inválida. Tente novamente.\n");
+        }
+    }
+}
