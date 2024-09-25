@@ -1,0 +1,268 @@
+const readline = require('readline');
+const fs = require('fs').promises;
+
+// Classes
+class Cliente {
+    constructor(username, password, nome, saldo) {
+        this.username = username;
+        this.password = password;
+        this.nome = nome;
+        this.saldo = saldo;
+        this.historico = [];
+    }
+
+    debitarSaldo(valor) {
+        if (this.saldo >= valor) {
+            this.saldo -= valor;
+            return true;
+        }
+        return false;
+    }
+
+    adicionarHistorico(locacao) {
+        this.historico.push(locacao);
+    }
+
+    toString() {
+        return `Cliente: ${this.nome} | Saldo: R$${this.saldo.toFixed(2)}`;
+    }
+}
+
+class Filme {
+    constructor(codigo, nome, preco, quantidade) {
+        this.codigo = codigo;
+        this.nome = nome;
+        this.preco = preco;
+        this.quantidade = quantidade;
+    }
+
+    toString() {
+        return `Código: ${this.codigo} | Filme: ${this.nome} | Preço: R$${this.preco.toFixed(2)} | Estoque: ${this.quantidade}`;
+    }
+}
+
+// Variáveis globais
+let clientesRegistrados = [];
+const estoque = [
+    new Filme('1', 'A Culpa é das Estrelas', 5.0, 20),
+    new Filme('2', 'Vingadores: Ultimato', 7.0, 15),
+    new Filme('3', 'O Senhor dos Anéis', 6.0, 10),
+    new Filme('4', 'Matrix', 4.0, 12),
+    new Filme('5', 'O Rei Leão', 3.0, 25)
+];
+
+// Interface de leitura
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+// Funções auxiliares
+const perguntaAsync = (pergunta) => new Promise(resolve => rl.question(pergunta, resolve));
+
+// Funções principais
+async function imprimirCatalogo() {
+    console.log("===== Catálogo de Filmes =====");
+    estoque.forEach(filme => console.log(filme.toString()));
+    await salvarCatalogoEmArquivo();
+}
+
+async function salvarCatalogoEmArquivo() {
+    const catalogoDir = './catalogo_filmes.txt';
+    let conteudoCatalogo = "===== Catálogo de Filmes =====\n";
+    
+    estoque.forEach(filme => {
+        conteudoCatalogo += `${filme.toString()}\n`;
+    });
+    
+    await fs.writeFile(catalogoDir, conteudoCatalogo);
+    console.log(`Catálogo de filmes salvo em ${catalogoDir}`);
+}
+
+async function realizarLocacao(cliente) {
+    const carrinho = [];
+    let totalLocacao = 0;
+
+    while (true) {
+        await imprimirCatalogo();
+        const codigo = await perguntaAsync("Digite o código do filme para adicionar ao carrinho (ou 'fim' para finalizar): ");
+        
+        if (codigo.toLowerCase() === 'fim') break;
+
+        const filme = estoque.find(f => f.codigo === codigo);
+        if (filme && filme.quantidade > 0) {
+            carrinho.push(filme);
+            totalLocacao += filme.preco;
+            filme.quantidade--;
+            console.log(`Filme '${filme.nome}' adicionado ao carrinho.`);
+        } else {
+            console.log(filme ? "Filme indisponível." : "Código inválido.");
+        }
+    }
+
+    console.log(`Total da locação: R$${totalLocacao.toFixed(2)}`);
+    if (cliente.debitarSaldo(totalLocacao)) {
+        await gerarNotaFiscal(cliente, carrinho);
+        cliente.adicionarHistorico(carrinho);
+        console.log("Locação realizada com sucesso!");
+    } else {
+        console.log("Saldo insuficiente.");
+    }
+}
+
+async function gerarNotaFiscal(cliente, locacao) {
+    const notasFiscaisDir = './notas_fiscais';
+    try {
+        await fs.access(notasFiscaisDir);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            await fs.mkdir(notasFiscaisDir);
+        } else {
+            throw error;
+        }
+    }
+
+    const numNota = (await fs.readdir(notasFiscaisDir)).length + 1;
+    const dataHora = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').replace(/\..+/, '');
+    const nomeArquivo = `${notasFiscaisDir}/nota_fiscal_${numNota}_${dataHora}.txt`;
+
+    let conteudoNota = `Nota Fiscal\n`;
+    conteudoNota += `Cliente: ${cliente.nome}\n`;
+    conteudoNota += `Data: ${new Date().toLocaleString()}\n`;
+    conteudoNota += `==============================\n`;
+    locacao.forEach(filme => {
+        conteudoNota += `${filme.toString()}\n`;
+    });
+    conteudoNota += `==============================\n`;
+    conteudoNota += `Total: R$${locacao.reduce((total, filme) => total + filme.preco, 0).toFixed(2)}\n`;
+
+    await fs.writeFile(nomeArquivo, conteudoNota);
+    console.log(`Nota fiscal gerada: ${nomeArquivo}`);
+}
+
+async function realizarLogin() {
+    const username = await perguntaAsync("Digite seu nome de usuário: ");
+    const password = await perguntaAsync("Digite sua senha: ");
+    const cliente = clientesRegistrados.find(c => c.username === username && c.password === password);
+    return cliente ? cliente : (console.log("Login inválido."), null);
+}
+
+async function cadastrarNovoCliente() {
+    const username = await perguntaAsync("Escolha um nome de usuário: ");
+    if (clientesRegistrados.some(c => c.username === username)) {
+        console.log("Usuário já existe.");
+        return;
+    }
+    const password = await perguntaAsync("Escolha uma senha: ");
+    const nome = await perguntaAsync("Digite seu nome: ");
+    const saldo = parseFloat(await perguntaAsync("Digite seu saldo inicial: "));
+    clientesRegistrados.push(new Cliente(username, password, nome, saldo));
+    console.log("Cliente cadastrado com sucesso!");
+}
+
+async function menuAdministrativo() {
+    const usuarioAdmin = 'admin';
+    const senhaAdmin = '1234';
+
+    const username = await perguntaAsync("Digite o nome de usuário do administrador: ");
+    const password = await perguntaAsync("Digite a senha do administrador: ");
+
+    if (username === usuarioAdmin && password === senhaAdmin) {
+        while (true) {
+            console.log("\n===== Menu Administrativo =====");
+            console.log("1. Adicionar filme");
+            console.log("2. Remover filme");
+            console.log("3. Alterar preço de filme");
+            console.log("4. Listar filmes");
+            console.log("5. Sair do menu administrativo");
+
+            const opcao = await perguntaAsync("Escolha uma opção: ");
+
+            switch (opcao) {
+                case '1':
+                    await adicionarFilmeAdmin();
+                    break;
+                case '2':
+                    await removerFilmeAdmin();
+                    break;
+                case '3':
+                    await alterarPrecoFilme();
+                    break;
+                case '4':
+                    await imprimirCatalogo();
+                    break;
+                case '5':
+                    return;
+                default:
+                    console.log("Opção inválida. Tente novamente.");
+            }
+        }
+    } else {
+        console.log("Usuário ou senha incorretos. Acesso negado.");
+    }
+}
+
+async function adicionarFilmeAdmin() {
+    const codigo = await perguntaAsync("Digite o código do filme: ");
+    const nome = await perguntaAsync("Digite o nome do filme: ");
+    const preco = parseFloat(await perguntaAsync("Digite o preço do filme: "));
+    const quantidade = parseInt(await perguntaAsync("Digite a quantidade do filme: "));
+
+    const novoFilme = new Filme(codigo, nome, preco, quantidade);
+    estoque.push(novoFilme);
+    console.log(`Filme '${nome}' adicionado com sucesso!`);
+}
+
+async function removerFilmeAdmin() {
+    const codigo = await perguntaAsync("Digite o código do filme a ser removido: ");
+    const index = estoque.findIndex(f => f.codigo === codigo);
+
+    if (index !== -1) {
+        const filmeRemovido = estoque.splice(index, 1);
+        console.log(`Filme '${filmeRemovido[0].nome}' removido com sucesso!`);
+    } else {
+        console.log("Filme não encontrado.");
+    }
+}
+
+async function alterarPrecoFilme() {
+    const codigo = await perguntaAsync("Digite o código do filme: ");
+    const filme = estoque.find(f => f.codigo === codigo);
+
+    if (filme) {
+        const novoPreco = parseFloat(await perguntaAsync("Digite o novo preço: "));
+        filme.preco = novoPreco;
+        console.log(`Preço do filme '${filme.nome}' alterado para R$${novoPreco.toFixed(2)}.`);
+    } else {
+        console.log("Filme não encontrado.");
+    }
+}
+
+async function main() {
+    console.log("===== Bem-vindo ao Sistema de Locação de Filmes =====");
+    await salvarCatalogoEmArquivo(); // Gera o arquivo do catálogo na inicialização
+    while (true) {
+        const opcao = await perguntaAsync("1. Login\n2. Cadastrar\n3. Acessar Admin\n4. Sair\nEscolha uma opção: ");
+        switch (opcao) {
+            case '1':
+                const cliente = await realizarLogin();
+                if (cliente) await realizarLocacao(cliente);
+                break;
+            case '2':
+                await cadastrarNovoCliente();
+                break;
+            case '3':
+                await menuAdministrativo();
+                break;
+            case '4':
+                console.log("Saindo...");
+                rl.close();
+                return;
+            default:
+                console.log("Opção inválida.");
+        }
+    }
+}
+
+// Execução principal
+main().catch(err => console.error(err));
